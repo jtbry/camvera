@@ -10,7 +10,6 @@ import (
 type motionDetector struct {
 	delta  gocv.Mat
 	thresh gocv.Mat
-	window *gocv.Window
 	mog2   gocv.BackgroundSubtractorMOG2
 }
 
@@ -18,7 +17,6 @@ func NewMotionDetector() FrameProcessor {
 	return &motionDetector{
 		delta:  gocv.NewMat(),
 		thresh: gocv.NewMat(),
-		window: gocv.NewWindow("Motion Detect"),
 		mog2:   gocv.NewBackgroundSubtractorMOG2(),
 	}
 }
@@ -38,23 +36,23 @@ func (md *motionDetector) ProcessFrame(frame gocv.Mat) {
 	// find contours
 	contours := gocv.FindContours(md.thresh, gocv.RetrievalExternal, gocv.ChainApproxSimple)
 
+	// check contour sizes
 	for i := 0; i < contours.Size(); i++ {
 		area := gocv.ContourArea(contours.At(i))
 		if area < 3000 {
+			// contour area too small to be motion
 			continue
 		}
 
-		gocv.DrawContours(&frame, contours, i, color.RGBA{0, 0, 255, 0}, 2)
+		// motion found
 		gocv.Rectangle(&frame, gocv.BoundingRect(contours.At(i)), color.RGBA{255, 0, 0, 0}, 2)
 	}
 
 	contours.Close()
-	md.window.IMShow(frame)
 }
 
 func (md *motionDetector) Close() {
 	md.delta.Close()
 	md.thresh.Close()
-	md.window.Close()
 	md.mog2.Close()
 }
