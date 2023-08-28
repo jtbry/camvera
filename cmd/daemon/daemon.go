@@ -1,6 +1,10 @@
 package main
 
 import (
+	"image"
+	"image/color"
+	"time"
+
 	"github.com/jtbry/camvera/pkg/frameprocess"
 	"gocv.io/x/gocv"
 )
@@ -24,6 +28,10 @@ func main() {
 		if img.Empty() {
 			continue
 		}
+
+		// Timestamp the frame
+		now := time.Now()
+		gocv.PutText(&img, now.Format("2006-01-02 15:04:05"), image.Pt(10, 50), gocv.FontHersheyPlain, 2.0, color.RGBA{0, 255, 0, 0}, 2)
 
 		md.ProcessFrame(img)
 		gocv.WaitKey(1)

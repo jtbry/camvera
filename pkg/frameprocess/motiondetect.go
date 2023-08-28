@@ -3,14 +3,20 @@ package frameprocess
 import (
 	"image"
 	"image/color"
+	"time"
 
 	"gocv.io/x/gocv"
 )
+
+type motionEvent struct {
+	lastMove time.Time
+}
 
 type motionDetector struct {
 	delta  gocv.Mat
 	thresh gocv.Mat
 	mog2   gocv.BackgroundSubtractorMOG2
+	event  *motionEvent
 }
 
 func NewMotionDetector() FrameProcessor {
@@ -18,6 +24,7 @@ func NewMotionDetector() FrameProcessor {
 		delta:  gocv.NewMat(),
 		thresh: gocv.NewMat(),
 		mog2:   gocv.NewBackgroundSubtractorMOG2(),
+		event:  nil,
 	}
 }
 
@@ -37,6 +44,7 @@ func (md *motionDetector) ProcessFrame(frame gocv.Mat) {
 	contours := gocv.FindContours(md.thresh, gocv.RetrievalExternal, gocv.ChainApproxSimple)
 
 	// check contour sizes
+	motion := false
 	for i := 0; i < contours.Size(); i++ {
 		area := gocv.ContourArea(contours.At(i))
 		if area < 3000 {
@@ -45,7 +53,19 @@ func (md *motionDetector) ProcessFrame(frame gocv.Mat) {
 		}
 
 		// motion found
+		motion = true
+		if md.event == nil {
+			println("Motion Started")
+		} else {
+			md.event.lastMove = time.Now()
+		}
 		gocv.Rectangle(&frame, gocv.BoundingRect(contours.At(i)), color.RGBA{255, 0, 0, 0}, 2)
+	}
+
+	// If no motion continues for 5 seconds, consider it ended
+	if !motion && md.event != nil && time.Since(md.event.lastMove) > 5*time.Second {
+		println("Motion Ended")
+		md.event = nil
 	}
 
 	contours.Close()
