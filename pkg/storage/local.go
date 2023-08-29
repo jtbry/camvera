@@ -46,3 +46,9 @@ func (ls *LocalStorage) CloseVideoWriter() error {
 	}
 	return ls.activeWriter.Close()
 }
+
+func (ls *LocalStorage) Close() {
+	if ls.activeWriter != nil {
+		ls.activeWriter.Close()
+	}
+}

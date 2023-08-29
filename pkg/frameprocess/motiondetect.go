@@ -87,4 +87,5 @@ func (md *motionDetector) Close() {
 	md.delta.Close()
 	md.thresh.Close()
 	md.mog2.Close()
+	md.local.Close()
 }
