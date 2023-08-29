@@ -5,7 +5,6 @@ import (
 	"image/color"
 	"time"
 
-	"github.com/jtbry/camvera/pkg/storage"
 	"gocv.io/x/gocv"
 )
 
@@ -18,7 +17,6 @@ type motionDetector struct {
 	thresh gocv.Mat
 	mog2   gocv.BackgroundSubtractorMOG2
 	event  *motionEvent
-	local  *storage.LocalStorage
 }
 
 func NewMotionDetector() FrameProcessor {
@@ -27,7 +25,6 @@ func NewMotionDetector() FrameProcessor {
 		thresh: gocv.NewMat(),
 		mog2:   gocv.NewBackgroundSubtractorMOG2(),
 		event:  nil,
-		local:  storage.NewLocalStorage(),
 	}
 }
 
@@ -60,24 +57,18 @@ func (md *motionDetector) ProcessFrame(frame gocv.Mat) {
 		if md.event == nil {
 			println("Motion Started")
 			md.event = &motionEvent{lastMove: time.Now()}
-			md.local.SaveFrame(frame)
-			md.local.OpenVideoWriter()
 		} else {
 			md.event.lastMove = time.Now()
 		}
 
 		// draw a rectangle around the contour
 		gocv.Rectangle(&frame, gocv.BoundingRect(contours.At(i)), color.RGBA{255, 0, 0, 0}, 2)
-
-		// save the current frame
-		md.local.WriteVideoFrame(frame)
 	}
 
 	// If no motion continues for 5 seconds, consider it ended
 	if !motion && md.event != nil && time.Since(md.event.lastMove) > 5*time.Second {
 		println("Motion Ended")
 		md.event = nil
-		md.local.CloseVideoWriter()
 	}
 
 	contours.Close()
@@ -87,5 +78,4 @@ func (md *motionDetector) Close() {
 	md.delta.Close()
 	md.thresh.Close()
 	md.mog2.Close()
-	md.local.Close()
 }

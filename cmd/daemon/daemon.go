@@ -1,39 +1,38 @@
 package main
 
 import (
-	"image"
-	"image/color"
-	"time"
+	"context"
+	"log"
+	"os"
 
-	"github.com/jtbry/camvera/pkg/frameprocess"
-	"gocv.io/x/gocv"
+	"github.com/jtbry/camvera/internal/vision"
+	"github.com/jtbry/camvera/internal/web"
+	"github.com/spf13/viper"
 )
 
 func main() {
-	cam, err := gocv.OpenVideoCapture(0)
+	ctx := context.Background()
+
+	logger := log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
+
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("./configs/")
+	viper.WatchConfig()
+	err := viper.ReadInConfig()
 	if err != nil {
-		panic(err)
-	}
-	defer cam.Close()
-
-	img := gocv.NewMat()
-	defer img.Close()
-
-	md := frameprocess.NewMotionDetector()
-	defer md.Close()
-	for {
-		if ok := cam.Read(&img); !ok {
-			panic("cannot read device")
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			logger.Println("Config File Not Found")
+		} else {
+			logger.Fatal("Config file found but error reading it")
 		}
-		if img.Empty() {
-			continue
-		}
-
-		// Timestamp the frame
-		now := time.Now()
-		gocv.PutText(&img, now.Format("2006-01-02 15:04:05"), image.Pt(10, 50), gocv.FontHersheyPlain, 2.0, color.RGBA{0, 255, 0, 0}, 2)
-
-		md.ProcessFrame(img)
-		gocv.WaitKey(1)
 	}
+
+	cv := vision.NewCvWorker(ctx, logger)
+	web := web.NewWebServer(ctx, logger)
+
+	go cv.Start()
+	go web.Start()
+
+	<-ctx.Done()
 }
