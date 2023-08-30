@@ -3,28 +3,35 @@ package frameprocess
 import (
 	"image"
 	"image/color"
+	"log"
 	"time"
 
+	"github.com/jtbry/camvera/pkg/storage"
 	"gocv.io/x/gocv"
 )
 
 type motionEvent struct {
 	lastMove time.Time
+	video    *gocv.VideoWriter
 }
 
 type motionDetector struct {
-	delta  gocv.Mat
-	thresh gocv.Mat
-	mog2   gocv.BackgroundSubtractorMOG2
-	event  *motionEvent
+	delta   gocv.Mat
+	thresh  gocv.Mat
+	mog2    gocv.BackgroundSubtractorMOG2
+	event   *motionEvent
+	log     *log.Logger
+	storage *storage.LocalStorage
 }
 
-func NewMotionDetector() FrameProcessor {
+func NewMotionDetector(logger *log.Logger) FrameProcessor {
 	return &motionDetector{
-		delta:  gocv.NewMat(),
-		thresh: gocv.NewMat(),
-		mog2:   gocv.NewBackgroundSubtractorMOG2(),
-		event:  nil,
+		delta:   gocv.NewMat(),
+		thresh:  gocv.NewMat(),
+		mog2:    gocv.NewBackgroundSubtractorMOG2(),
+		event:   nil,
+		log:     logger,
+		storage: storage.NewLocalStorage(logger),
 	}
 }
 
@@ -55,8 +62,15 @@ func (md *motionDetector) ProcessFrame(frame gocv.Mat) {
 		// motion found
 		motion = true
 		if md.event == nil {
-			println("Motion Started")
-			md.event = &motionEvent{lastMove: time.Now()}
+			md.storage.SaveImage(frame)
+			vw, err := md.storage.OpenVideoWriter()
+			if err != nil {
+				md.log.Println(err)
+			}
+			md.event = &motionEvent{
+				lastMove: time.Now(),
+				video:    vw,
+			}
 		} else {
 			md.event.lastMove = time.Now()
 		}
@@ -65,9 +79,14 @@ func (md *motionDetector) ProcessFrame(frame gocv.Mat) {
 		gocv.Rectangle(&frame, gocv.BoundingRect(contours.At(i)), color.RGBA{255, 0, 0, 0}, 2)
 	}
 
+	// Write to video if active event
+	if md.event != nil && md.event.video != nil {
+		md.event.video.Write(frame)
+	}
+
 	// If no motion continues for 5 seconds, consider it ended
 	if !motion && md.event != nil && time.Since(md.event.lastMove) > 5*time.Second {
-		println("Motion Ended")
+		md.event.video.Close()
 		md.event = nil
 	}
 

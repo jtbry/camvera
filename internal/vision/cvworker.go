@@ -32,7 +32,7 @@ func (w *cvWorker) Start() {
 	defer cam.Close()
 
 	// Create frame processors
-	md := frameprocess.NewMotionDetector()
+	md := frameprocess.NewMotionDetector(w.log)
 	defer md.Close()
 
 	// Read frames
@@ -49,7 +49,7 @@ func (w *cvWorker) Start() {
 
 		// Timestamp the frame
 		now := time.Now()
-		gocv.PutText(&frame, now.Format(time.RFC3339), image.Pt(10, 20), gocv.FontHersheyPlain, 1.2, color.RGBA{255, 255, 255, 0}, 2)
+		gocv.PutText(&frame, now.Format(time.DateTime), image.Pt(10, 20), gocv.FontHersheyPlain, 1.2, color.RGBA{255, 255, 255, 0}, 2)
 
 		// Apply frame processors
 		md.ProcessFrame(frame)

@@ -2,53 +2,37 @@ package storage
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"gocv.io/x/gocv"
 )
 
 type LocalStorage struct {
-	activeWriter *gocv.VideoWriter
+	log *log.Logger
 }
 
-func NewLocalStorage() *LocalStorage {
-	return &LocalStorage{}
-}
-
-func (ls *LocalStorage) SaveFrame(frame gocv.Mat) bool {
-	path := fmt.Sprintf("./data/%d.jpg", time.Now().Unix())
-	return gocv.IMWrite(path, frame)
-}
-
-func (ls *LocalStorage) OpenVideoWriter() error {
-	if ls.activeWriter != nil {
-		return fmt.Errorf("VideoWriter already active")
+func NewLocalStorage(logger *log.Logger) *LocalStorage {
+	if _, err := os.Stat("./data"); os.IsNotExist(err) {
+		err := os.Mkdir("./data/", os.ModePerm)
+		if err != nil {
+			logger.Fatal(err)
+		}
 	}
-	path := fmt.Sprintf("./data/%d.mp4", time.Now().Unix())
-	writer, err := gocv.VideoWriterFile(path, "mp4v", 25, 640, 480, true)
-	if err != nil {
-		return err
+
+	return &LocalStorage{
+		log: logger,
 	}
-	ls.activeWriter = writer
-	return nil
 }
 
-func (ls *LocalStorage) WriteVideoFrame(frame gocv.Mat) error {
-	if ls.activeWriter == nil {
-		return fmt.Errorf("VideoWriter not active")
-	}
-	return ls.activeWriter.Write(frame)
+func (ls *LocalStorage) SaveImage(img gocv.Mat) {
+	now := time.Now()
+	name := fmt.Sprintf("./data/%d.jpg", now.Unix())
+	gocv.IMWrite(name, img)
 }
 
-func (ls *LocalStorage) CloseVideoWriter() error {
-	if ls.activeWriter == nil {
-		return fmt.Errorf("VideoWriter not active")
-	}
-	return ls.activeWriter.Close()
-}
-
-func (ls *LocalStorage) Close() {
-	if ls.activeWriter != nil {
-		ls.activeWriter.Close()
-	}
+func (ls *LocalStorage) OpenVideoWriter() (*gocv.VideoWriter, error) {
+	name := fmt.Sprintf("./data/%d.mp4", time.Now().Unix())
+	return gocv.VideoWriterFile(name, "mp4v", 25, 640, 480, true)
 }
