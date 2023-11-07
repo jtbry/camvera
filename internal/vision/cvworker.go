@@ -34,8 +34,6 @@ func (w *cvWorker) Start() {
 	// Create frame processors
 	md := frameprocess.NewMotionDetector(w.log)
 	defer md.Close()
-	streamer := frameprocess.NewWebStreamer(w.log)
-	defer streamer.Close()
 
 	// Read frames
 	frame := gocv.NewMat()
@@ -55,7 +53,6 @@ func (w *cvWorker) Start() {
 
 		// Apply frame processors
 		md.ProcessFrame(frame)
-		streamer.ProcessFrame(frame)
 
 		// WaitKey
 		gocv.WaitKey(1)

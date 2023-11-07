@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/jtbry/camvera/internal/vision"
-	"github.com/jtbry/camvera/internal/web"
 	"github.com/spf13/viper"
 )
 
@@ -29,10 +28,8 @@ func main() {
 	}
 
 	cv := vision.NewCvWorker(ctx, logger)
-	web := web.NewWebServer(ctx, logger)
 
 	go cv.Start()
-	go web.Start()
 
 	<-ctx.Done()
 }
